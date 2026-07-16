@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type, FileState, ApiError, PartMediaResolutionLevel, createUserContent, createPartFromUri, createPartFromText, type Schema, type Content } from "@google/genai";
+﻿import { GoogleGenAI, Type, FileState, ApiError, PartMediaResolutionLevel, createUserContent, createPartFromUri, createPartFromText, type Schema, type Content } from "@google/genai";
 import type { GuardrailResult, FarmAnalysis, SessionMessage } from "./types";
 
 // Swap this if the model name ever errors out — check the current list at
@@ -20,15 +20,39 @@ export function getClient(): GoogleGenAI {
   return client;
 }
 
-async function withRetry429<T>(fn: () => Promise<T>): Promise<T> {
+// 429 = rate limited, 503 = model overloaded — both are transient and worth
+// one retry. Anything else (or a repeat failure) surfaces as a friendly
+// message instead of the raw Gemini error JSON.
+const RETRYABLE_STATUSES = new Set([429, 503]);
+
+function toFriendlyError(err: unknown): Error {
+  // Log the raw error (with its real status code) here, before it's replaced
+  // by a friendly message — otherwise the route handler's console.error only
+  // ever sees the generic text and loses the actual cause.
+  console.error("[gemini] request failed:", err);
+
+  if (err instanceof ApiError) {
+    if (RETRYABLE_STATUSES.has(err.status)) {
+      return new Error("The AI is busy, try again in a moment.");
+    }
+    return new Error("Something went wrong talking to Gemini. Please try again.");
+  }
+  return err instanceof Error ? err : new Error("Something went wrong. Please try again.");
+}
+
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (err) {
-    if (err instanceof ApiError && err.status === 429) {
+    if (err instanceof ApiError && RETRYABLE_STATUSES.has(err.status)) {
       await new Promise((resolve) => setTimeout(resolve, 3000));
-      return await fn();
+      try {
+        return await fn();
+      } catch (retryErr) {
+        throw toFriendlyError(retryErr);
+      }
     }
-    throw err;
+    throw toFriendlyError(err);
   }
 }
 
@@ -92,7 +116,7 @@ const guardrailSchema: Schema = {
 
 export async function runGuardrail(media: UploadedMedia): Promise<GuardrailResult> {
   const ai = getClient();
-  const response = await withRetry429(() =>
+  const response = await withRetry(() =>
     ai.models.generateContent({
       model: MODEL,
       contents: createUserContent([
@@ -169,7 +193,7 @@ const analysisSchema: Schema = {
 
 export async function runAnalysis(media: UploadedMedia): Promise<FarmAnalysis> {
   const ai = getClient();
-  const response = await withRetry429(() =>
+  const response = await withRetry(() =>
     ai.models.generateContent({
       model: MODEL,
       contents: createUserContent([
@@ -222,7 +246,7 @@ function buildChatContents(media: UploadedMedia, analysis: FarmAnalysis, message
 
 export async function runChat(media: UploadedMedia, analysis: FarmAnalysis, messages: SessionMessage[], question: string): Promise<string> {
   const ai = getClient();
-  const response = await withRetry429(() =>
+  const response = await withRetry(() =>
     ai.models.generateContent({
       model: MODEL,
       contents: buildChatContents(media, analysis, messages, question),
@@ -250,7 +274,7 @@ export async function summarizeIfNeeded(messages: SessionMessage[]): Promise<Ses
 
   const ai = getClient();
   const transcript = toSummarize.map((m) => `${m.role}: ${m.content}`).join("\n");
-  const response = await withRetry429(() =>
+  const response = await withRetry(() =>
     ai.models.generateContent({
       model: MODEL,
       contents: `Conversation so far:\n${transcript}`,

@@ -1,0 +1,8 @@
+node_modules
+.next
+.git
+.idea
+.claude
+.claude.json
+.env*.local
+npm-debug.log*
