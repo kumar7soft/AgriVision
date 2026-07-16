@@ -149,7 +149,20 @@ Analyze:
 Be specific and actionable. Prefer "Leaves in grid A2 show yellowing
 consistent with early nitrogen deficiency - apply a nitrogen-rich
 fertilizer within 5 days" over generic advice. If you cannot verify
-something from the video, say so - do not invent findings.`;
+something from the video, say so - do not invent findings.
+
+For every issue's recommended_action, name the specific remedy - the
+exact nutrient or fertilizer type (e.g. nitrogen-rich, phosphorus,
+potassium, micronutrient mix), the specific pesticide/fungicide category
+(e.g. neem oil for aphids, copper-based fungicide for fungal leaf spot),
+or a concrete cultural practice (e.g. reduce watering frequency, widen
+spacing to 30cm) - never a vague instruction like "apply treatment" or
+"consult an expert".
+
+Also fill care_recommendation as a single overall verdict: if the crop
+looks healthy with no significant issues, explicitly say no special
+treatment is needed right now. Otherwise, summarize the single most
+important fertilizer/pesticide/fungicide or practice to apply first.`;
 
 const analysisSchema: Schema = {
   type: Type.OBJECT,
@@ -157,6 +170,11 @@ const analysisSchema: Schema = {
     crop_type: { type: Type.STRING },
     overall_health_score: { type: Type.NUMBER },
     summary: { type: Type.STRING, description: "2-3 sentences" },
+    care_recommendation: {
+      type: Type.STRING,
+      description:
+        "Overall verdict: 'no special treatment needed' if healthy, otherwise the single most important fertilizer/pesticide/fungicide or practice to apply first",
+    },
     issues: {
       type: Type.ARRAY,
       items: {
@@ -166,7 +184,10 @@ const analysisSchema: Schema = {
           problem: { type: Type.STRING },
           severity: { type: Type.STRING, enum: ["low", "medium", "high"] },
           confidence: { type: Type.STRING, enum: ["low", "medium", "high"] },
-          recommended_action: { type: Type.STRING },
+          recommended_action: {
+            type: Type.STRING,
+            description: "Name the specific fertilizer/pesticide/fungicide type or cultural practice, not a vague instruction",
+          },
           timeframe: { type: Type.STRING, description: "e.g. 'within 3 days'" },
         },
         required: ["grid_location", "problem", "severity", "confidence", "recommended_action", "timeframe"],
@@ -181,6 +202,7 @@ const analysisSchema: Schema = {
     "crop_type",
     "overall_health_score",
     "summary",
+    "care_recommendation",
     "issues",
     "spacing_assessment",
     "soil_assessment",

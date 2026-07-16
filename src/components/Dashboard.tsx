@@ -36,6 +36,11 @@ export default function Dashboard({ analysis }: { analysis: FarmAnalysis }) {
         <p className="text-sm text-neutral-600">{analysis.summary}</p>
       </div>
 
+      <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+        <h3 className="text-sm font-semibold text-green-800">Recommended care</h3>
+        <p className="mt-1 text-sm text-green-700">{analysis.care_recommendation}</p>
+      </div>
+
       {sortedIssues.length > 0 && (
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Issues detected</h3>

@@ -18,6 +18,7 @@ export interface FarmAnalysis {
   crop_type: string;
   overall_health_score: number;
   summary: string;
+  care_recommendation: string;
   issues: AnalysisIssue[];
   spacing_assessment: string;
   soil_assessment: string;

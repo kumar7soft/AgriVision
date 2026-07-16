@@ -6,7 +6,20 @@ const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 // In-memory store. Fine for a hackathon prototype — a production build
 // would swap this for Redis/Postgres so sessions survive a server restart
 // and work across multiple instances.
-const sessions = new Map<string, FarmSession>();
+//
+// Stashed on globalThis rather than a plain module-level variable: Next.js
+// dev mode can compile each API route as a separate bundle, which would
+// otherwise give /api/upload and /api/chat their own independent copies of
+// this module (and thus two different empty Maps, causing spurious "session
+// not found" errors). globalThis is the one thing guaranteed to be shared
+// across the whole Node process regardless of bundling.
+declare global {
+  // eslint-disable-next-line no-var
+  var __agritwinSessions: Map<string, FarmSession> | undefined;
+}
+
+const sessions = globalThis.__agritwinSessions ?? new Map<string, FarmSession>();
+globalThis.__agritwinSessions = sessions;
 
 function isExpired(session: FarmSession): boolean {
   return Date.now() - session.lastAccessedAt > SESSION_TTL_MS;
