@@ -46,7 +46,7 @@ Camera capture requires HTTPS or `localhost`. To test on an actual phone:
 
 ## Model name
 
-The model is set via `GEMINI_MODEL` in `.env.example` (default `gemini-3.5-flash`). If that name ever errors out, check the current model list at [ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models) and set `GEMINI_MODEL` in `.env.local` to a valid name — no code changes needed.
+The model is set via `GEMINI_MODEL` in `.env.example` (default `gemini-2.5-flash`). If you see repeated 503 "high demand" errors, it's Google's shared infrastructure being overloaded, not a bug — try a different model name (check the current list at [ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models)) and set `GEMINI_MODEL` in `.env.local` accordingly — no code changes needed.
 
 ## Manual test checklist
 

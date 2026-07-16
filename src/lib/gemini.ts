@@ -1,9 +1,9 @@
-﻿import { GoogleGenAI, Type, FileState, ApiError, PartMediaResolutionLevel, createUserContent, createPartFromUri, createPartFromText, type Schema, type Content } from "@google/genai";
+﻿import { GoogleGenAI, Type, FileState, ApiError, MediaResolution, createUserContent, createPartFromUri, createPartFromText, type Schema, type Content } from "@google/genai";
 import type { GuardrailResult, FarmAnalysis, SessionMessage } from "./types";
 
 // Swap this if the model name ever errors out — check the current list at
 // https://ai.google.dev/gemini-api/docs/models
-export const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+export const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 let client: GoogleGenAI | null = null;
 
@@ -119,14 +119,12 @@ export async function runGuardrail(media: UploadedMedia): Promise<GuardrailResul
   const response = await withRetry(() =>
     ai.models.generateContent({
       model: MODEL,
-      contents: createUserContent([
-        createPartFromUri(media.uri, media.mimeType, PartMediaResolutionLevel.MEDIA_RESOLUTION_LOW),
-        "Classify this media.",
-      ]),
+      contents: createUserContent([createPartFromUri(media.uri, media.mimeType), "Classify this media."]),
       config: {
         systemInstruction: GUARDRAIL_SYSTEM_PROMPT,
         responseMimeType: "application/json",
         responseSchema: guardrailSchema,
+        mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW,
       },
     })
   );
