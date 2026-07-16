@@ -1,15 +1,37 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { HistoryEntry } from "@/lib/types";
 
 const MAX_SECONDS = 30;
+
+function relativeTime(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function healthColor(score: number): string {
+  if (score >= 75) return "text-green-600";
+  if (score >= 50) return "text-amber-600";
+  return "text-red-600";
+}
 
 export default function CaptureScreen({
   onSubmit,
   errorMessage,
+  history,
+  onSelectHistory,
 }: {
   onSubmit: (file: File, durationSeconds: number | null) => void;
   errorMessage: string | null;
+  history: HistoryEntry[];
+  onSelectHistory: (sessionId: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -160,6 +182,27 @@ export default function CaptureScreen({
       </label>
 
       {errorMessage && <p className="text-xs text-red-600">{errorMessage}</p>}
+
+      {history.length > 0 && (
+        <div className="mt-2 flex w-full max-w-sm flex-col gap-2 text-left">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Recent scans</h2>
+          {history.map((entry) => (
+            <button
+              key={entry.sessionId}
+              onClick={() => onSelectHistory(entry.sessionId)}
+              className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left active:bg-neutral-50"
+            >
+              <div>
+                <p className="text-sm font-medium text-neutral-800">{entry.cropType}</p>
+                <p className="text-xs text-neutral-400">{relativeTime(entry.createdAt)}</p>
+              </div>
+              <span className={`text-sm font-bold ${healthColor(entry.healthScore)}`}>
+                {Math.round(entry.healthScore)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

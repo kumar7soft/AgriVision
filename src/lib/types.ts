@@ -26,6 +26,13 @@ export interface FarmAnalysis {
   positive_observations: string[];
 }
 
+export interface HistoryEntry {
+  sessionId: string;
+  cropType: string;
+  healthScore: number;
+  createdAt: number;
+}
+
 export interface SessionMessage {
   role: "user" | "model";
   content: string;

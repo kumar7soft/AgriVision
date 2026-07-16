@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { FarmAnalysis, SessionMessage } from "@/lib/types";
+import type { FarmAnalysis, HistoryEntry, SessionMessage } from "@/lib/types";
 import CaptureScreen from "@/components/CaptureScreen";
 import AnalyzingScreen from "@/components/AnalyzingScreen";
 import RejectionScreen from "@/components/RejectionScreen";
@@ -12,6 +12,18 @@ import SetupErrorScreen from "@/components/SetupErrorScreen";
 type Screen = "loading" | "setup-error" | "capture" | "analyzing" | "rejected" | "dashboard";
 
 const SESSION_STORAGE_KEY = "agritwin_session_id";
+const HISTORY_STORAGE_KEY = "agritwin_history";
+const MAX_HISTORY_ENTRIES = 10;
+
+function loadHistory(): HistoryEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as HistoryEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("loading");
@@ -21,12 +33,50 @@ export default function Home() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<FarmAnalysis | null>(null);
   const [initialMessages, setInitialMessages] = useState<SessionMessage[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  function addHistoryEntry(entry: HistoryEntry) {
+    setHistory((prev) => {
+      const next = [entry, ...prev.filter((h) => h.sessionId !== entry.sessionId)].slice(0, MAX_HISTORY_ENTRIES);
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function removeHistoryEntry(id: string) {
+    setHistory((prev) => {
+      const next = prev.filter((h) => h.sessionId !== id);
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  // Loads a session's analysis + chat history (used both to resume on page
+  // refresh and to reopen a past scan from the history list).
+  async function restoreSession(id: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/session/${id}`);
+      if (!res.ok) throw new Error("expired");
+      const data = await res.json();
+      if (!data.analysis) throw new Error("no analysis");
+      setSessionId(id);
+      setAnalysis(data.analysis);
+      setInitialMessages(data.messages || []);
+      setScreen("dashboard");
+      localStorage.setItem(SESSION_STORAGE_KEY, id);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   // Restore a prior session on refresh, if one is still valid.
   useEffect(() => {
+    setHistory(loadHistory());
+
     fetch("/api/config")
       .then((res) => res.json())
-      .then((data) => {
+      .then(async (data) => {
         if (!data.configured) {
           setScreen("setup-error");
           return;
@@ -37,23 +87,29 @@ export default function Home() {
           setScreen("capture");
           return;
         }
-        fetch(`/api/session/${stored}`)
-          .then(async (res) => {
-            if (!res.ok) throw new Error("expired");
-            const sessionData = await res.json();
-            if (!sessionData.analysis) throw new Error("no analysis");
-            setSessionId(stored);
-            setAnalysis(sessionData.analysis);
-            setInitialMessages(sessionData.messages || []);
-            setScreen("dashboard");
-          })
-          .catch(() => {
-            localStorage.removeItem(SESSION_STORAGE_KEY);
-            setScreen("capture");
-          });
+        const ok = await restoreSession(stored);
+        if (!ok) {
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+          setScreen("capture");
+        }
       })
       .catch(() => setScreen("capture"));
   }, []);
+
+  async function handleSelectHistory(id: string) {
+    setErrorMessage(null);
+    const ok = await restoreSession(id);
+    if (!ok) {
+      removeHistoryEntry(id);
+      setErrorMessage("That scan has expired and is no longer available.");
+    }
+  }
+
+  function goHome() {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+    setErrorMessage(null);
+    setScreen("capture");
+  }
 
   async function handleCapture(file: File, durationSeconds: number | null) {
     setErrorMessage(null);
@@ -96,6 +152,12 @@ export default function Home() {
       setAnalysis(analyzeData);
       setInitialMessages([]);
       setScreen("dashboard");
+      addHistoryEntry({
+        sessionId: uploadData.sessionId,
+        cropType: analyzeData.crop_type,
+        healthScore: analyzeData.overall_health_score,
+        createdAt: Date.now(),
+      });
     } catch (err) {
       clearTimeout(cosmeticPhaseTimer);
       setErrorMessage(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -118,7 +180,14 @@ export default function Home() {
   }
 
   if (screen === "capture") {
-    return <CaptureScreen onSubmit={handleCapture} errorMessage={errorMessage} />;
+    return (
+      <CaptureScreen
+        onSubmit={handleCapture}
+        errorMessage={errorMessage}
+        history={history}
+        onSelectHistory={handleSelectHistory}
+      />
+    );
   }
 
   if (screen === "analyzing") {
@@ -138,8 +207,14 @@ export default function Home() {
   if (screen === "dashboard" && analysis && sessionId) {
     return (
       <div className="min-h-screen bg-neutral-50 pb-4">
-        <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur">
           <h1 className="text-base font-bold text-green-700">AgriTwin</h1>
+          <button
+            onClick={goHome}
+            className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 active:bg-neutral-100"
+          >
+            Home
+          </button>
         </header>
         <Dashboard analysis={analysis} />
         <Chat sessionId={sessionId} initialMessages={initialMessages} />
