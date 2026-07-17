@@ -8,6 +8,7 @@ import RejectionScreen from "@/components/RejectionScreen";
 import Dashboard from "@/components/Dashboard";
 import Chat from "@/components/Chat";
 import SetupErrorScreen from "@/components/SetupErrorScreen";
+import AppHeader from "@/components/AppHeader";
 
 type Screen = "loading" | "setup-error" | "capture" | "analyzing" | "rejected" | "dashboard";
 
@@ -207,15 +208,16 @@ export default function Home() {
   if (screen === "dashboard" && analysis && sessionId) {
     return (
       <div className="min-h-screen bg-neutral-50 pb-4">
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur">
-          <h1 className="text-base font-bold text-green-700">AgriTwin</h1>
-          <button
-            onClick={goHome}
-            className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 active:bg-neutral-100"
-          >
-            Home
-          </button>
-        </header>
+        <AppHeader
+          rightSlot={
+            <button
+              onClick={goHome}
+              className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 active:bg-neutral-100"
+            >
+              Home
+            </button>
+          }
+        />
         <Dashboard analysis={analysis} />
         <Chat sessionId={sessionId} initialMessages={initialMessages} />
       </div>
