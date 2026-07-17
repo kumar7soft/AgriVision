@@ -45,6 +45,7 @@ export interface FarmSession {
   lastAccessedAt: number;
   mediaFileUri: string | null;
   mediaMimeType: string | null;
+  mediaApiKeyIndex: number | null;
   guardrailResult: GuardrailResult | null;
   analysis: FarmAnalysis | null;
   messages: SessionMessage[];

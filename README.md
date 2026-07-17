@@ -46,7 +46,11 @@ Camera capture requires HTTPS or `localhost`. To test on an actual phone:
 
 ## Model name
 
-The model is set via `GEMINI_MODEL` in `.env.example` (default `gemini-2.5-flash`). If you see repeated 503 "high demand" errors, it's Google's shared infrastructure being overloaded, not a bug — try a different model name (check the current list at [ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models)) and set `GEMINI_MODEL` in `.env.local` accordingly — no code changes needed.
+The model is set via `GEMINI_MODEL` in `.env.example` (default `gemini-flash-latest`, Google's self-updating alias for the current recommended flash-tier model — this avoids hard-coding a version number that later gets deprecated for new accounts). If you see repeated 503 "high demand" errors, it's Google's shared infrastructure being overloaded, not a bug; if you see 404 "no longer available to new users" for a specific model name, that account's been moved to a newer model generation. Check the current list at [ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models) and set `GEMINI_MODEL` in `.env.local` accordingly — no code changes needed.
+
+### Multiple API keys for resilience
+
+Free-tier Gemini API keys have tight daily/per-minute quotas (as low as ~20 requests/day per model on some accounts). Set `GEMINI_API_KEYS` in `.env.local` to a comma-separated list of keys (e.g. from a few teammates' Google accounts) and the app will automatically fall back to the next key when one is rate-limited or out of quota — this happens at upload time, since Gemini's Files API ties an uploaded video to whichever key uploaded it, so all later calls for that session (guardrail, analysis, chat) stay pinned to that same key.
 
 ## Manual test checklist
 

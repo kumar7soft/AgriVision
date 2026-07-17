@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSession } from "@/lib/sessionStore";
-import { uploadMedia, runGuardrail } from "@/lib/gemini";
+import { uploadAndClassify } from "@/lib/gemini";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -37,11 +37,10 @@ export async function POST(req: NextRequest) {
 
     const session = createSession();
 
-    const media = await uploadMedia(file);
+    const { media, guardrail: guardrailResult } = await uploadAndClassify(file);
     session.mediaFileUri = media.uri;
     session.mediaMimeType = media.mimeType;
-
-    const guardrailResult = await runGuardrail(media);
+    session.mediaApiKeyIndex = media.apiKeyIndex;
     session.guardrailResult = guardrailResult;
 
     const accepted = guardrailResult.is_agricultural && guardrailResult.confidence >= GUARDRAIL_CONFIDENCE_THRESHOLD;

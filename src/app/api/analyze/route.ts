@@ -16,11 +16,15 @@ export async function POST(req: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Session not found or expired. Please record again." }, { status: 404 });
     }
-    if (!session.mediaFileUri || !session.mediaMimeType) {
+    if (!session.mediaFileUri || !session.mediaMimeType || session.mediaApiKeyIndex === null) {
       return NextResponse.json({ error: "No media uploaded for this session." }, { status: 400 });
     }
 
-    const analysis = await runAnalysis({ uri: session.mediaFileUri, mimeType: session.mediaMimeType });
+    const analysis = await runAnalysis({
+      uri: session.mediaFileUri,
+      mimeType: session.mediaMimeType,
+      apiKeyIndex: session.mediaApiKeyIndex,
+    });
     session.analysis = analysis;
     session.messages.push({ role: "model", content: JSON.stringify(analysis), timestamp: Date.now() });
 

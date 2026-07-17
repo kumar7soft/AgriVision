@@ -32,6 +32,7 @@ export function createSession(): FarmSession {
     lastAccessedAt: Date.now(),
     mediaFileUri: null,
     mediaMimeType: null,
+    mediaApiKeyIndex: null,
     guardrailResult: null,
     analysis: null,
     messages: [],

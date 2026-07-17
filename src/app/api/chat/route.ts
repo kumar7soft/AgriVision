@@ -16,13 +16,17 @@ export async function POST(req: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Session not found or expired. Please record again." }, { status: 404 });
     }
-    if (!session.mediaFileUri || !session.mediaMimeType || !session.analysis) {
+    if (!session.mediaFileUri || !session.mediaMimeType || session.mediaApiKeyIndex === null || !session.analysis) {
       return NextResponse.json({ error: "This farm hasn't been analyzed yet." }, { status: 400 });
     }
 
     session.messages = await summarizeIfNeeded(session.messages);
 
-    const media = { uri: session.mediaFileUri, mimeType: session.mediaMimeType };
+    const media = {
+      uri: session.mediaFileUri,
+      mimeType: session.mediaMimeType,
+      apiKeyIndex: session.mediaApiKeyIndex,
+    };
     const answer = await runChat(media, session.analysis, session.messages, question);
 
     const now = Date.now();
