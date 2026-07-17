@@ -152,7 +152,7 @@ export default function CaptureScreen({
         </div>
 
         <div className="relative flex h-64 w-full max-w-sm items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-br from-neutral-900 to-neutral-800 shadow-lg">
-          <video ref={videoRef} muted playsInline className="h-full w-full object-cover" />
+          <video ref={videoRef} muted playsInline className="absolute inset-0 h-full w-full object-cover" />
           {isRecording && (
             <div className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">
               <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
